@@ -7,19 +7,35 @@ import json
 import requests
 from datetime import datetime, timezone, timedelta
 
-TAIPOWER_BASE = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/'
+TAIPOWER_BASE  = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/'
+TAIPOWER_ENTRY = 'https://www.taipower.com.tw/tc/page.aspx?mid=206'
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                  '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Referer': 'https://www.taipower.com.tw/tc/page.aspx?mid=206',
-    'Accept-Language': 'zh-TW,zh;q=0.9',
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/124.0.0.0 Safari/537.36'
+    ),
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Referer': TAIPOWER_ENTRY,
 }
 TW_TZ = timezone(timedelta(hours=8))
+
+# Shared session — visit entry page first to obtain cookies
+_session = requests.Session()
+_session.headers.update(HEADERS)
+try:
+    _session.get(TAIPOWER_ENTRY, timeout=15)
+    print('session cookie established')
+except Exception as e:
+    print(f'session init warning: {e}')
 
 
 def fetch(path):
     url = TAIPOWER_BASE + path
-    res = requests.get(url, headers=HEADERS, timeout=30)
+    res = _session.get(url, timeout=30)
     res.raise_for_status()
     res.encoding = 'utf-8'
     text = res.text
