@@ -1,0 +1,11 @@
+{
+  "fetchTime": "2026-01-01T00:00:00+08:00",
+  "load": 0,
+  "capacity": 0,
+  "utilRate": 0,
+  "spareRate": 0,
+  "updateTime": "資料尚未產生",
+  "fuels": [],
+  "regions": { "北區": 0, "中區": 0, "南區": 0, "東區": 0 },
+  "error": null
+}

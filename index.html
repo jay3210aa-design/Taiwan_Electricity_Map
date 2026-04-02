@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台灣即時電力監控</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --bg:       #060c18;
+      --bg2:      #0b1525;
+      --bg3:      #101e35;
+      --bg4:      #162640;
+      --border:   #1c3355;
+      --border2:  #264878;
+      --text:     #c0d4ee;
+      --text2:    #5e82aa;
+      --text3:    #3a5a80;
+      --accent:   #3d8ef0;
+      --g-green:  #22c55e;
+      --g-yellow: #eab308;
+      --g-orange: #f97316;
+      --g-red:    #ef4444;
+      --radius:   8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────── */
+    #header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 100;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+    }
+
+    #header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border2), transparent);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .brand-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #0a2a5e, #1a4a9e);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      box-shadow: 0 0 10px rgba(61,142,240,0.2);
+    }
+    .brand-text {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
+
+    /* Status lamp */
+    .status-lamp {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
+    .lamp-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--text3);
+      transition: background 0.5s, box-shadow 0.5s;
+    }
+    .lamp-dot.green  { background: var(--g-green);  box-shadow: 0 0 8px var(--g-green); }
+    .lamp-dot.yellow { background: var(--g-yellow); box-shadow: 0 0 8px var(--g-yellow); }
+    .lamp-dot.orange { background: var(--g-orange); box-shadow: 0 0 8px var(--g-orange); }
+    .lamp-dot.red    { background: var(--g-red);    box-shadow: 0 0 8px var(--g-red); animation: blink 0.8s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .lamp-label { color: var(--text2); }
+    .lamp-status { font-weight: 700; }
+    .lamp-status.green  { color: var(--g-green); }
+    .lamp-status.yellow { color: var(--g-yellow); }
+    .lamp-status.orange { color: var(--g-orange); }
+    .lamp-status.red    { color: var(--g-red); }
+
+    /* Header stats */
+    .h-stats {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .h-stat {
+      display: flex;
+      flex-direction: column;
+    }
+    .h-stat-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+    .h-stat-lbl {
+      font-size: 0.68rem;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Countdown */
+    #countdown {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text2);
+      padding: 4px 10px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+    }
+    .cd-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    #update-time {
+      font-size: 0.73rem;
+      color: var(--text3);
+      white-space: nowrap;
+    }
+
+    #retry-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      color: var(--accent);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #retry-btn:hover { background: var(--bg4); }
+
+    /* ── MAIN ───────────────────────────────────────────────── */
+    #main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── MAP SECTION ────────────────────────────────────────── */
+    #map-section {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── INFO CARD (on map) ─────────────────────────────────── */
+    #info-card {
+      position: absolute;
+      top: 14px; left: 14px;
+      z-index: 500;
+      background: rgba(11,21,37,0.92);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      min-width: 200px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    .ic-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+    }
+
+    .ic-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 7px;
+    }
+    .ic-row:last-child { margin-bottom: 0; }
+
+    .ic-label { font-size: 0.78rem; color: var(--text2); }
+    .ic-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .ic-unit { font-size: 0.68rem; color: var(--text2); margin-left: 2px; }
+
+    .ic-divider { height: 1px; background: var(--border); margin: 9px 0; }
+
+    .ic-spare {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ic-spare-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .ic-spare-desc {
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    /* ── ENERGY PANEL ───────────────────────────────────────── */
+    #energy-panel {
+      width: 240px;
+      background: var(--bg2);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .ep-header {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      flex-shrink: 0;
+    }
+
+    .fuel-list {
+      padding: 8px 0;
+      flex: 1;
+    }
+
+    .fuel-item {
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(28,51,85,0.5);
+    }
+    .fuel-item:last-child { border-bottom: none; }
+
+    .fuel-top {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 5px;
+    }
+    .fuel-icon { font-size: 1rem; flex-shrink: 0; }
+    .fuel-name { font-size: 0.82rem; flex: 1; }
+    .fuel-mw {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .fuel-pct {
+      font-size: 0.72rem;
+      color: var(--text2);
+      text-align: right;
+      margin-bottom: 4px;
+    }
+
+    .fuel-bar-bg {
+      height: 4px;
+      background: var(--bg3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .fuel-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.8s ease;
+    }
+
+    .ep-total {
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .ep-total-lbl { font-size: 0.78rem; color: var(--text2); }
+    .ep-total-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    /* ── LOADING OVERLAY ────────────────────────────────────── */
+    #loading-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(6,12,24,0.75);
+      z-index: 9990;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+    }
+    #loading-overlay.show { display: flex; }
+
+    .ld-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ld-text { font-size: 0.9rem; color: var(--text2); }
+
+    /* ── ERROR BANNER ───────────────────────────────────────── */
+    #error-banner {
+      display: none;
+      position: fixed;
+      bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(80,15,15,0.95);
+      border: 1px solid var(--g-red);
+      color: #fca5a5;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.83rem;
+      z-index: 9999;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      max-width: 480px;
+    }
+
+    /* ── LEAFLET OVERRIDES ──────────────────────────────────── */
+    .leaflet-popup-content-wrapper {
+      background: rgba(11,21,37,0.95) !important;
+      border: 1px solid var(--border2) !important;
+      border-radius: 9px !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+      backdrop-filter: blur(8px);
+    }
+    .leaflet-popup-content {
+      margin: 14px 16px !important;
+      font-family: 'Noto Sans TC', sans-serif !important;
+      color: var(--text) !important;
+      min-width: 180px;
+    }
+    .leaflet-popup-tip { background: rgba(11,21,37,0.95) !important; }
+    .leaflet-popup-close-button { color: var(--text2) !important; }
+    .leaflet-tooltip {
+      background: rgba(11,21,37,0.92) !important;
+      border: 1px solid var(--border2) !important;
+      border-radius: 5px !important;
+      color: var(--text) !important;
+      font-family: 'Noto Sans TC', sans-serif !important;
+      font-size: 0.8rem !important;
+      padding: 4px 9px !important;
+    }
+    .leaflet-control-attribution {
+      background: rgba(6,12,24,0.8) !important;
+      color: var(--text3) !important;
+    }
+    .leaflet-control-attribution a { color: var(--text2) !important; }
+
+    /* ── POPUP CONTENT ──────────────────────────────────────── */
+    .pu-region { font-size: 1rem; font-weight: 700; margin-bottom: 10px; color: var(--accent); }
+    .pu-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 5px;
+      font-size: 0.83rem;
+    }
+    .pu-lbl { color: var(--text2); }
+    .pu-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+    .pu-status {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    /* ── PROGRESS BAR ───────────────────────────────────────── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      width: 0%;
+      transition: width 0.4s ease;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    /* ── RWD ────────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      #energy-panel { display: none; }
+    }
+    @media (max-width: 600px) {
+      .h-stats { display: none; }
+      .sep { display: none; }
+      #info-card { min-width: 160px; padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- ── LOADING ──────────────────────────────────────────────── -->
+<div id="loading-overlay">
+  <div class="ld-spinner"></div>
+  <div class="ld-text" id="loading-text">連接台電資料中...</div>
+</div>
+
+<!-- ── ERROR BANNER ──────────────────────────────────────────── -->
+<div id="error-banner"></div>
+
+<!-- ── HEADER ────────────────────────────────────────────────── -->
+<header id="header">
+  <div class="brand">
+    <div class="brand-icon">⚡</div>
+    <span class="brand-text">台灣即時電力監控</span>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="status-lamp" id="status-lamp">
+    <div class="lamp-dot" id="lamp-dot"></div>
+    <span class="lamp-label">備轉容量率</span>
+    <span class="lamp-status" id="lamp-status">--</span>
+  </div>
+
+  <div class="h-stats">
+    <div class="h-stat">
+      <span class="h-stat-val" id="h-load">--</span>
+      <span class="h-stat-lbl">目前用電（萬瓩）</span>
+    </div>
+    <div class="h-stat">
+      <span class="h-stat-val" id="h-cap">--</span>
+      <span class="h-stat-lbl">供電能力（萬瓩）</span>
+    </div>
+    <div class="h-stat">
+      <span class="h-stat-val" id="h-util">--%</span>
+      <span class="h-stat-lbl">使用率</span>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div id="countdown">
+      <div class="cd-dot"></div>
+      <span id="cd-text">--:--</span>
+      <span style="color:var(--text3)">後更新</span>
+    </div>
+    <span id="update-time">尚未更新</span>
+    <button id="retry-btn">↻ 重整</button>
+  </div>
+</header>
+
+<!-- ── MAIN ──────────────────────────────────────────────────── -->
+<div id="main">
+
+  <div id="map-section">
+    <div id="map"></div>
+
+    <!-- Info card overlay -->
+    <div id="info-card">
+      <div class="ic-title">全台電力概況</div>
+      <div class="ic-row">
+        <span class="ic-label">目前用電</span>
+        <span class="ic-val" id="ic-load">--<span class="ic-unit">萬瓩</span></span>
+      </div>
+      <div class="ic-row">
+        <span class="ic-label">供電能力</span>
+        <span class="ic-val" id="ic-cap">--<span class="ic-unit">萬瓩</span></span>
+      </div>
+      <div class="ic-row">
+        <span class="ic-label">使用率</span>
+        <span class="ic-val" id="ic-util">--%</span>
+      </div>
+      <div class="ic-divider"></div>
+      <div class="ic-spare">
+        <div>
+          <div style="font-size:0.68rem;color:var(--text2);margin-bottom:3px">備轉容量率</div>
+          <div class="ic-spare-val" id="ic-spare">--%</div>
+        </div>
+        <div class="ic-spare-desc" id="ic-spare-desc">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Energy Panel -->
+  <aside id="energy-panel">
+    <div class="ep-header">發電結構（即時）</div>
+    <div class="fuel-list" id="fuel-list">
+      <!-- filled by JS -->
+    </div>
+    <div class="ep-total">
+      <span class="ep-total-lbl">總發電量</span>
+      <span class="ep-total-val" id="ep-total">-- MW</span>
+    </div>
+  </aside>
+</div>
+
+<!-- ── JAVASCRIPT ─────────────────────────────────────────────── -->
+<script>
+// ============================================================
+//  CONSTANTS
+// ============================================================
+// 資料由 GitHub Actions (scripts/fetch_data.py) 每 10 分鐘更新至 data.json
+
+const REGIONS = {
+  '北區': { lat: 25.0,  lng: 121.5, label: '北區', mw: 0, pct: 0 },
+  '中區': { lat: 24.1,  lng: 120.7, label: '中區', mw: 0, pct: 0 },
+  '南區': { lat: 22.7,  lng: 120.3, label: '南區', mw: 0, pct: 0 },
+  '東區': { lat: 23.5,  lng: 121.4, label: '東區', mw: 0, pct: 0 },
+};
+
+const FUEL_DEFS = [
+  { keys: ['核能'],                  label: '核能',     icon: '⚛️',  color: '#8b5cf6' },
+  { keys: ['燃煤', '煤'],            label: '燃煤',     icon: '🏭',  color: '#64748b' },
+  { keys: ['燃氣', '天然氣', '氣'],  label: '燃氣',     icon: '🔥',  color: '#0ea5e9' },
+  { keys: ['燃油', '油'],            label: '燃油',     icon: '🛢️',  color: '#a16207' },
+  { keys: ['太陽能', '光電', '太陽'],label: '太陽能',   icon: '☀️',  color: '#fbbf24' },
+  { keys: ['風力', '離岸風力'],      label: '風力',     icon: '💨',  color: '#22d3ee' },
+  { keys: ['水力'],                  label: '水力',     icon: '💧',  color: '#06b6d4' },
+  { keys: ['抽蓄', '抽水'],          label: '抽蓄水力', icon: '🔋',  color: '#34d399' },
+  { keys: ['汽電', '共生'],          label: '汽電共生', icon: '⚙️',  color: '#a3e635' },
+  { keys: ['輕油'],                  label: '輕油',     icon: '🛢️',  color: '#b45309' },
+];
+
+const REFRESH_INTERVAL = 10 * 60; // 10 minutes in seconds
+
+// ============================================================
+//  STATE
+// ============================================================
+let state = {
+  load: 0, capacity: 0, utilRate: 0, spareRate: 0, updateTime: '--',
+  regions: {}, fuels: [],
+};
+let regionMarkers = {};
+let countdownSec  = REFRESH_INTERVAL;
+let countdownTimer = null;
+let fetchTimer    = null;
+let isLoading     = false;
+
+// ============================================================
+//  MAP
+// ============================================================
+const map = L.map('map', {
+  center: [23.97, 120.97],
+  zoom: 7,
+  zoomControl: true,
+  attributionControl: true,
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19,
+  attribution: '© <a href="https://openstreetmap.org" style="color:#5e82aa">OSM</a> © <a href="https://carto.com" style="color:#5e82aa">CARTO</a> | 資料來源：台灣電力公司',
+}).addTo(map);
+
+// Init region markers
+Object.entries(REGIONS).forEach(([key, r]) => {
+  const m = L.circleMarker([r.lat, r.lng], {
+    radius: 28,
+    fillColor: '#3a5a80',
+    fillOpacity: 0.55,
+    color: '#4a7aaa',
+    weight: 2,
+  }).addTo(map);
+
+  m.bindTooltip(key, { permanent: false, direction: 'top' });
+  m.bindPopup('', { maxWidth: 260 });
+  m.on('click', () => updateRegionPopup(key, m));
+  regionMarkers[key] = m;
+});
+
+// ============================================================
+//  FETCH DATA.JSON (produced by GitHub Actions)
+// ============================================================
+async function fetchAll() {
+  setProgress(10);
+  setLoadingText('讀取電力資料...');
+  const res = await fetch('./data.json?_=' + Date.now(), { cache: 'no-store' });
+  if (!res.ok) throw new Error(`無法取得 data.json (HTTP ${res.status})`);
+  setProgress(80);
+  const data = await res.json();
+  if (data.error) console.warn('台電資料警告:', data.error);
+  return data;
+}
+
+// ============================================================
+//  UI UPDATE
+// ============================================================
+function getStatusColor(spareRate) {
+  if (spareRate >= 10) return 'green';
+  if (spareRate >= 6)  return 'yellow';
+  return 'red';
+}
+
+function getStatusLabel(spareRate) {
+  if (spareRate >= 10) return '供電充裕';
+  if (spareRate >= 6)  return '供電吃緊';
+  return '供電警戒';
+}
+
+function getRegionColor(pct) {
+  if (pct < 80) return { fill: '#22c55e', border: '#16a34a' };
+  if (pct < 90) return { fill: '#eab308', border: '#ca8a04' };
+  if (pct < 95) return { fill: '#f97316', border: '#ea580c' };
+  return            { fill: '#ef4444', border: '#dc2626' };
+}
+
+function fmt(n) {
+  return Number(n).toLocaleString('zh-TW', { maximumFractionDigits: 1 });
+}
+
+function updateHeader(data) {
+  const sc = getStatusColor(data.spareRate);
+  const sl = getStatusLabel(data.spareRate);
+
+  // Lamp
+  const dot = document.getElementById('lamp-dot');
+  const status = document.getElementById('lamp-status');
+  dot.className = `lamp-dot ${sc}`;
+  status.className = `lamp-status ${sc}`;
+  status.textContent = sl;
+
+  // Stats
+  document.getElementById('h-load').textContent = fmt(data.load);
+  document.getElementById('h-cap').textContent  = fmt(data.capacity);
+  document.getElementById('h-util').textContent = data.utilRate.toFixed(1) + '%';
+  document.getElementById('update-time').textContent = '更新：' + data.updateTime;
+}
+
+function updateInfoCard(data) {
+  document.getElementById('ic-load').innerHTML = `${fmt(data.load)}<span class="ic-unit">萬瓩</span>`;
+  document.getElementById('ic-cap').innerHTML  = `${fmt(data.capacity)}<span class="ic-unit">萬瓩</span>`;
+  document.getElementById('ic-util').textContent = data.utilRate.toFixed(1) + '%';
+
+  const sc = getStatusColor(data.spareRate);
+  const sl = getStatusLabel(data.spareRate);
+  const colorMap = { green: 'var(--g-green)', yellow: 'var(--g-yellow)', orange: 'var(--g-orange)', red: 'var(--g-red)' };
+  const c = colorMap[sc] || 'var(--text)';
+
+  const spareEl = document.getElementById('ic-spare');
+  spareEl.textContent = data.spareRate.toFixed(1) + '%';
+  spareEl.style.color = c;
+
+  const descEl = document.getElementById('ic-spare-desc');
+  descEl.textContent = sl;
+  descEl.style.color = c;
+}
+
+function updateRegionMarkers(data) {
+  const regionData = data.regions;
+  const totalRegion = Object.values(regionData).reduce((s, v) => s + v, 0) || data.load || 1;
+
+  Object.entries(REGIONS).forEach(([key, r]) => {
+    const mw  = regionData[key] || 0;
+    const pct = totalRegion > 0 ? (mw / totalRegion) * 100 : 0;
+    // Use overall utilRate since we don't have per-region utilRate
+    const pressurePct = data.utilRate || 0;
+    const colors = getRegionColor(pressurePct);
+
+    REGIONS[key].mw  = mw;
+    REGIONS[key].pct = pct;
+
+    const m = regionMarkers[key];
+    m.setStyle({
+      fillColor: colors.fill,
+      color: colors.border,
+      fillOpacity: 0.65,
+    });
+
+    m.setTooltipContent(`${key}：${fmt(mw)} 萬瓩`);
+  });
+}
+
+function updateRegionPopup(key, marker) {
+  const r = REGIONS[key];
+  const sc = getStatusColor(state.spareRate);
+  const colorMap = { green:'#22c55e', yellow:'#eab308', orange:'#f97316', red:'#ef4444' };
+  const c = colorMap[sc] || '#3d8ef0';
+  const bgMap = { green:'#14532d', yellow:'#713f12', orange:'#7c2d12', red:'#7f1d1d' };
+  const bg = bgMap[sc] || '#1a3a6e';
+
+  const totalLoad = state.load || 1;
+  const pct = r.mw > 0 ? ((r.mw / totalLoad) * 100).toFixed(1) : '--';
+
+  marker.setPopupContent(`
+    <div class="pu-region">📍 ${key}</div>
+    <div class="pu-row"><span class="pu-lbl">用電量（估）</span><span class="pu-val">${fmt(r.mw)} 萬瓩</span></div>
+    <div class="pu-row"><span class="pu-lbl">占全台（估）</span><span class="pu-val">${pct}%</span></div>
+    <div class="pu-row"><span class="pu-lbl">全台使用率</span><span class="pu-val">${state.utilRate.toFixed(1)}%</span></div>
+    <span class="pu-status" style="background:${bg};color:${c}">${getStatusLabel(state.spareRate)}</span>
+  `);
+}
+
+function updateEnergyPanel(fuels) {
+  // Match raw fuel names to our defs
+  const matched = [];
+  let totalMW = 0;
+
+  FUEL_DEFS.forEach(def => {
+    let mw = 0;
+    fuels.forEach(f => {
+      if (def.keys.some(k => f.name.includes(k))) mw += f.mw;
+    });
+    if (mw > 0) {
+      matched.push({ ...def, mw });
+      totalMW += mw;
+    }
+  });
+
+  // Unmatched fuels → 其他
+  let otherMW = 0;
+  fuels.forEach(f => {
+    const known = FUEL_DEFS.some(def => def.keys.some(k => f.name.includes(k)));
+    if (!known) otherMW += f.mw;
+  });
+  if (otherMW > 0) matched.push({ label:'其他', icon:'⚡', color:'#94a3b8', mw: otherMW });
+  totalMW += otherMW;
+
+  // Sort by MW desc
+  matched.sort((a, b) => b.mw - a.mw);
+
+  const list = document.getElementById('fuel-list');
+  if (matched.length === 0) {
+    list.innerHTML = '<div style="padding:16px 14px;color:var(--text2);font-size:0.8rem;line-height:1.7">台電發電資料<br>目前無法透過 Proxy 取得，<br>主要電力概況仍正常顯示。</div>';
+    return;
+  }
+
+  list.innerHTML = matched.map(f => {
+    const pct = totalMW > 0 ? (f.mw / totalMW * 100) : 0;
+    return `
+      <div class="fuel-item">
+        <div class="fuel-top">
+          <span class="fuel-icon">${f.icon}</span>
+          <span class="fuel-name">${f.label}</span>
+          <span class="fuel-mw">${fmt(f.mw)}</span>
+        </div>
+        <div class="fuel-pct">${pct.toFixed(1)}%</div>
+        <div class="fuel-bar-bg">
+          <div class="fuel-bar-fill" style="width:${pct.toFixed(1)}%;background:${f.color}"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('ep-total').textContent = fmt(totalMW) + ' 萬瓩';
+}
+
+function updateAll(data) {
+  state = { ...state, ...data };
+  updateHeader(data);
+  updateInfoCard(data);
+  updateRegionMarkers(data);
+  updateEnergyPanel(data.fuels || []);
+}
+
+// ============================================================
+//  COUNTDOWN TIMER
+// ============================================================
+function startCountdown() {
+  clearInterval(countdownTimer);
+  countdownSec = REFRESH_INTERVAL;
+  countdownTimer = setInterval(() => {
+    countdownSec--;
+    if (countdownSec <= 0) {
+      clearInterval(countdownTimer);
+      refresh();
+      return;
+    }
+    const m = Math.floor(countdownSec / 60).toString().padStart(2, '0');
+    const s = (countdownSec % 60).toString().padStart(2, '0');
+    document.getElementById('cd-text').textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+// ============================================================
+//  REFRESH
+// ============================================================
+async function refresh() {
+  if (isLoading) return;
+  isLoading = true;
+
+  document.getElementById('loading-overlay').classList.add('show');
+  hideError();
+  setProgress(5);
+
+  try {
+    const data = await fetchAll();
+    updateAll(data);
+    setProgress(100);
+    setTimeout(() => setProgress(0), 600);
+    startCountdown();
+  } catch (err) {
+    console.error(err);
+    showError(err.message);
+    setProgress(0);
+  } finally {
+    isLoading = false;
+    document.getElementById('loading-overlay').classList.remove('show');
+  }
+}
+
+document.getElementById('retry-btn').addEventListener('click', refresh);
+
+// ============================================================
+//  UI HELPERS
+// ============================================================
+function setProgress(pct) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+function setLoadingText(t) {
+  document.getElementById('loading-text').textContent = t;
+}
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  el.innerHTML = `⚠ ${msg} &nbsp;<button onclick="refresh()" style="background:transparent;border:1px solid #ef4444;color:#fca5a5;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:0.8rem">重試</button>`;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 15000);
+}
+function hideError() {
+  document.getElementById('error-banner').style.display = 'none';
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+refresh();
+</script>
+</body>
+</html>
