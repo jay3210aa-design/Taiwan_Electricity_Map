@@ -4,49 +4,25 @@ Outputs: data.json in repo root (served by GitHub Pages).
 """
 import re
 import json
-import requests
+import cloudscraper
 from datetime import datetime, timezone, timedelta
 
 TAIPOWER_BASE  = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/'
 TAIPOWER_ENTRY = 'https://www.taipower.com.tw/tc/page.aspx?mid=206'
-HEADERS = {
-    'User-Agent': (
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-        'AppleWebKit/537.36 (KHTML, like Gecko) '
-        'Chrome/124.0.0.0 Safari/537.36'
-    ),
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Connection': 'keep-alive',
-    'Referer': TAIPOWER_ENTRY,
-}
 TW_TZ = timezone(timedelta(hours=8))
 
-# Shared session — visit entry page first to obtain cookies
-_session = requests.Session()
-_session.headers.update(HEADERS)
+# cloudscraper 模擬真實瀏覽器，可繞過 Cloudflare
+_scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
 try:
-    page = _session.get(TAIPOWER_ENTRY, timeout=15)
-    print('session cookie established')
-    # Find JS files and scan them for data file references
-    js_urls = re.findall(r'src=["\']([^"\']*\.js[^"\'?]*)', page.text)
-    for js_path in js_urls[:8]:
-        full = js_path if js_path.startswith('http') else 'https://www.taipower.com.tw' + js_path
-        try:
-            js_text = _session.get(full, timeout=10).text
-            found = re.findall(r'data/([^\s"\']+\.(?:csv|txt))', js_text)
-            if found:
-                print(f'  JS {js_path} → {list(set(found))}')
-        except Exception:
-            pass
+    _scraper.get(TAIPOWER_ENTRY, timeout=15)
+    print('session established via cloudscraper')
 except Exception as e:
     print(f'session init warning: {e}')
 
 
 def fetch(path):
     url = TAIPOWER_BASE + path
-    res = _session.get(url, timeout=30)
+    res = _scraper.get(url, timeout=30)
     res.raise_for_status()
     res.encoding = 'utf-8'
     text = res.text
