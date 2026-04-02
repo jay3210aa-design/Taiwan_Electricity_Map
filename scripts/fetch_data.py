@@ -27,8 +27,19 @@ TW_TZ = timezone(timedelta(hours=8))
 _session = requests.Session()
 _session.headers.update(HEADERS)
 try:
-    _session.get(TAIPOWER_ENTRY, timeout=15)
+    page = _session.get(TAIPOWER_ENTRY, timeout=15)
     print('session cookie established')
+    # Find JS files and scan them for data file references
+    js_urls = re.findall(r'src=["\']([^"\']*\.js[^"\'?]*)', page.text)
+    for js_path in js_urls[:8]:
+        full = js_path if js_path.startswith('http') else 'https://www.taipower.com.tw' + js_path
+        try:
+            js_text = _session.get(full, timeout=10).text
+            found = re.findall(r'data/([^\s"\']+\.(?:csv|txt))', js_text)
+            if found:
+                print(f'  JS {js_path} → {list(set(found))}')
+        except Exception:
+            pass
 except Exception as e:
     print(f'session init warning: {e}')
 
