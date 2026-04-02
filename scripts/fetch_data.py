@@ -92,13 +92,26 @@ def main():
         result['error'] = str(e)
         print(f'loadpara FAIL: {e}')
 
-    # --- genary (optional) ---
-    try:
-        text = fetch('genary.csv')
-        result['fuels'] = parse_genary(text)
-        print(f"genary OK: {len(result['fuels'])} 能源別")
-    except Exception as e:
-        print(f'genary FAIL: {e}')
+    # --- fuel generation (try multiple possible filenames) ---
+    FUEL_CANDIDATES = [
+        'genary.csv',
+        'fueltype.csv',
+        'fueltype_curr.csv',
+        'genloadareachart.txt',
+        'fueltype.txt',
+    ]
+    for candidate in FUEL_CANDIDATES:
+        try:
+            text = fetch(candidate)
+            fuels = parse_genary(text)
+            if fuels:
+                result['fuels'] = fuels
+                print(f"fuel OK ({candidate}): {len(fuels)} 能源別")
+                break
+        except Exception as e:
+            print(f'fuel FAIL ({candidate}): {e}')
+    else:
+        print('所有 fuel 路徑均失敗')
 
     # --- regions (estimated) ---
     result['regions'] = estimate_regions(result.get('load', 0))
