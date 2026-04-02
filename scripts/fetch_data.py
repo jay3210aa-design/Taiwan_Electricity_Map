@@ -4,28 +4,54 @@ Outputs: data.json in repo root (served by GitHub Pages).
 """
 import re
 import json
-import cloudscraper
+import time
+import requests
 from datetime import datetime, timezone, timedelta
 
+# 主要資料來源：台電 loadGraph（有 Cloudflare 保護，偶爾可過）
 TAIPOWER_BASE  = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/'
 TAIPOWER_ENTRY = 'https://www.taipower.com.tw/tc/page.aspx?mid=206'
+# 備用來源：台電開放資料平台（不同子網域，較少限制）
+OPENDATA_BASE  = 'https://data.taipower.com.tw/opendata/apply/file/'
 TW_TZ = timezone(timedelta(hours=8))
 
-# cloudscraper 模擬真實瀏覽器，可繞過 Cloudflare
-_scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
+HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/124.0.0.0 Safari/537.36'
+    ),
+    'Accept-Language': 'zh-TW,zh;q=0.9',
+    'Referer': TAIPOWER_ENTRY,
+}
+
+_session = requests.Session()
+_session.headers.update(HEADERS)
 try:
-    _scraper.get(TAIPOWER_ENTRY, timeout=15)
-    print('session established via cloudscraper')
+    _session.get(TAIPOWER_ENTRY, timeout=15)
+    print('session established')
 except Exception as e:
     print(f'session init warning: {e}')
 
 
-def fetch(path):
-    url = TAIPOWER_BASE + path
-    res = _scraper.get(url, timeout=30)
-    res.raise_for_status()
-    res.encoding = 'utf-8'
-    text = res.text
+def fetch(url, retries=3, delay=8):
+    """帶重試的 GET，自動排除 HTML 錯誤頁"""
+    last_err = ''
+    for i in range(retries):
+        try:
+            res = _session.get(url, timeout=30)
+            res.raise_for_status()
+            res.encoding = 'utf-8'
+            text = res.text
+            if text.strip().startswith('<'):
+                raise ValueError('收到 HTML（被擋）')
+            return text
+        except Exception as e:
+            last_err = str(e)
+            if i < retries - 1:
+                print(f'  retry {i+1}/{retries-1} after {delay}s... ({e})')
+                time.sleep(delay)
+    raise Exception(last_err)
     if text.strip().startswith('<'):
         raise ValueError(f'{path} 回傳 HTML（可能被 Cloudflare 擋）')
     return text
@@ -86,33 +112,38 @@ def main():
     now = datetime.now(TW_TZ).isoformat()
     result = {'fetchTime': now, 'error': None, 'fuels': [], 'regions': {}}
 
-    # --- loadpara (required) ---
-    try:
-        text = fetch('loadpara.txt')
-        result.update(parse_loadpara(text))
-        print(f"loadpara OK: load={result['load']} 萬瓩, spare={result['spareRate']}%")
-    except Exception as e:
-        result['error'] = str(e)
-        print(f'loadpara FAIL: {e}')
-
-    # --- fuel generation (try multiple possible filenames) ---
-    FUEL_CANDIDATES = [
-        'genary.csv',
-        'fueltype.csv',
-        'fueltype_curr.csv',
-        'genloadareachart.txt',
-        'fueltype.txt',
+    # --- loadpara (主要來源 → 開放資料備用) ---
+    LOADPARA_CANDIDATES = [
+        TAIPOWER_BASE + 'loadpara.txt',
+        OPENDATA_BASE + 'd006001/001.txt',   # 台電開放資料平台備用
     ]
-    for candidate in FUEL_CANDIDATES:
+    for url in LOADPARA_CANDIDATES:
         try:
-            text = fetch(candidate)
+            text = fetch(url, retries=2, delay=5)
+            result.update(parse_loadpara(text))
+            print(f"loadpara OK ({url.split('/')[-1]}): load={result['load']} 萬瓩, spare={result['spareRate']}%")
+            break
+        except Exception as e:
+            result['error'] = str(e)
+            print(f'loadpara FAIL ({url.split("/")[-1]}): {e}')
+
+    # --- fuel generation (開放資料平台 + 多路徑嘗試) ---
+    FUEL_CANDIDATES = [
+        OPENDATA_BASE + 'd006001/002.csv',   # 台電開放資料（發電量）
+        OPENDATA_BASE + 'd006001/003.csv',
+        TAIPOWER_BASE + 'genary.csv',
+        TAIPOWER_BASE + 'fueltype.csv',
+    ]
+    for url in FUEL_CANDIDATES:
+        try:
+            text = fetch(url, retries=1, delay=3)
             fuels = parse_genary(text)
             if fuels:
                 result['fuels'] = fuels
-                print(f"fuel OK ({candidate}): {len(fuels)} 能源別")
+                print(f"fuel OK ({url.split('/')[-1]}): {len(fuels)} 能源別")
                 break
         except Exception as e:
-            print(f'fuel FAIL ({candidate}): {e}')
+            print(f'fuel FAIL ({url.split("/")[-1]}): {e}')
     else:
         print('所有 fuel 路徑均失敗')
 
