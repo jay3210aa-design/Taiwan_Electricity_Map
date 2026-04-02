@@ -80,25 +80,26 @@ def parse_loadpara(text):
     }
 
 
-def parse_genary(text):
-    fuels = []
+FUEL_NAMES = ['核能', '燃煤', '民營燃煤', '燃氣', '民營燃氣', '重油', '太陽能', '水力', '輕油', '風力', '汽電共生', '抽蓄']
+
+
+def parse_loadfueltype(text):
+    """解析 loadfueltype.csv：無表頭，每列 = 時間 + 12 個燃料 MW 值，取最後一筆"""
+    last_row = None
     for line in text.strip().splitlines():
         parts = line.strip().split(',')
-        if len(parts) < 2:
-            continue
-        name = parts[0].strip()
-        if not name:
-            continue
-        mw = 0.0
-        for p in parts[1:]:
-            try:
-                v = float(p.strip())
-                if v != 0:
-                    mw = v
-                    break
-            except ValueError:
-                continue
-        fuels.append({'name': name, 'mw': round(mw, 1)})
+        if len(parts) >= 13:
+            last_row = parts
+    if not last_row:
+        raise ValueError('loadfueltype 無有效資料列')
+    fuels = []
+    for i, name in enumerate(FUEL_NAMES):
+        try:
+            mw = float(last_row[i + 1])
+        except (ValueError, IndexError):
+            mw = 0.0
+        if mw > 0:
+            fuels.append({'name': name, 'mw': round(mw, 1)})
     return fuels
 
 
@@ -127,17 +128,15 @@ def main():
             result['error'] = str(e)
             print(f'loadpara FAIL ({url.split("/")[-1]}): {e}')
 
-    # --- fuel generation (開放資料平台 + 多路徑嘗試) ---
+    # --- fuel generation ---
     FUEL_CANDIDATES = [
-        OPENDATA_BASE + 'd006001/002.csv',   # 台電開放資料（發電量）
-        OPENDATA_BASE + 'd006001/003.csv',
-        TAIPOWER_BASE + 'genary.csv',
-        TAIPOWER_BASE + 'fueltype.csv',
+        TAIPOWER_BASE + 'loadfueltype.csv',
+        TAIPOWER_BASE + 'loadfueltype_1.csv',
     ]
     for url in FUEL_CANDIDATES:
         try:
             text = fetch(url, retries=1, delay=3)
-            fuels = parse_genary(text)
+            fuels = parse_loadfueltype(text)
             if fuels:
                 result['fuels'] = fuels
                 print(f"fuel OK ({url.split('/')[-1]}): {len(fuels)} 能源別")
