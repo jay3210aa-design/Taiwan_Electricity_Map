@@ -1,5 +1,5 @@
 {
-  "fetchTime": "2026-04-07T00:00:34.965282+08:00",
+  "fetchTime": "2026-04-07T01:05:25.981106+08:00",
   "error": "HTTPSConnectionPool(host='data.taipower.com.tw', port=443): Max retries exceeded with url: /opendata/apply/file/d006001/001.txt (Caused by NameResolutionError(\"HTTPSConnection(host='data.taipower.com.tw', port=443): Failed to resolve 'data.taipower.com.tw' ([Errno -2] Name or service not known)\"))",
   "fuels": [],
   "regions": {
