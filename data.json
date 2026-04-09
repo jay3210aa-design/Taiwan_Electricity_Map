@@ -1,61 +1,11 @@
 {
-  "fetchTime": "2026-04-09T18:39:48.587146+08:00",
-  "error": null,
-  "fuels": [
-    {
-      "name": "核能",
-      "mw": 1185.7
-    },
-    {
-      "name": "燃煤",
-      "mw": 560.8
-    },
-    {
-      "name": "民營燃煤",
-      "mw": 845.3
-    },
-    {
-      "name": "燃氣",
-      "mw": 113.9
-    },
-    {
-      "name": "民營燃氣",
-      "mw": 116.4
-    },
-    {
-      "name": "重油",
-      "mw": 33.4
-    },
-    {
-      "name": "太陽能",
-      "mw": 13.0
-    },
-    {
-      "name": "水力",
-      "mw": 258.4
-    },
-    {
-      "name": "輕油",
-      "mw": 41.9
-    },
-    {
-      "name": "風力",
-      "mw": 169.2
-    },
-    {
-      "name": "汽電共生",
-      "mw": 0.3
-    }
-  ],
+  "fetchTime": "2026-04-09T19:39:14.333869+08:00",
+  "error": "HTTPSConnectionPool(host='data.taipower.com.tw', port=443): Max retries exceeded with url: /opendata/apply/file/d006001/001.txt (Caused by NameResolutionError(\"HTTPSConnection(host='data.taipower.com.tw', port=443): Failed to resolve 'data.taipower.com.tw' ([Errno -2] Name or service not known)\"))",
+  "fuels": [],
   "regions": {
-    "北區": 1402.1,
-    "中區": 801.2,
-    "南區": 968.1,
-    "東區": 166.9
-  },
-  "load": 3338.4,
-  "capacity": 4234.3,
-  "utilRate": 78.8,
-  "spareRate": 26.8,
-  "updateTime": "115.04.09(四)18:30更新"
+    "北區": 0.0,
+    "中區": 0.0,
+    "南區": 0.0,
+    "東區": 0.0
+  }
 }
