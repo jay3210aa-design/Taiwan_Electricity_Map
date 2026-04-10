@@ -11,8 +11,7 @@ from datetime import datetime, timezone, timedelta
 # 主要資料來源：台電 loadGraph（有 Cloudflare 保護，偶爾可過）
 TAIPOWER_BASE  = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/'
 TAIPOWER_ENTRY = 'https://www.taipower.com.tw/tc/page.aspx?mid=206'
-# 備用來源：台電開放資料平台（不同子網域，較少限制）
-OPENDATA_BASE  = 'https://data.taipower.com.tw/opendata/apply/file/'
+# 備用來源已停用（data.taipower.com.tw DNS 無法解析）
 TW_TZ = timezone(timedelta(hours=8))
 
 HEADERS = {
@@ -52,9 +51,6 @@ def fetch(url, retries=3, delay=8):
                 print(f'  retry {i+1}/{retries-1} after {delay}s... ({e})')
                 time.sleep(delay)
     raise Exception(last_err)
-    if text.strip().startswith('<'):
-        raise ValueError(f'{path} 回傳 HTML（可能被 Cloudflare 擋）')
-    return text
 
 
 def parse_loadpara(text):
@@ -116,7 +112,6 @@ def main():
     # --- loadpara (主要來源 → 開放資料備用) ---
     LOADPARA_CANDIDATES = [
         TAIPOWER_BASE + 'loadpara.txt',
-        OPENDATA_BASE + 'd006001/001.txt',   # 台電開放資料平台備用
     ]
     for url in LOADPARA_CANDIDATES:
         try:
