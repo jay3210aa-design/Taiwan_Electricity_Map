@@ -687,14 +687,14 @@ function updateHeader(data) {
   // Stats
   document.getElementById('h-load').textContent = fmt(data.load);
   document.getElementById('h-cap').textContent  = fmt(data.capacity);
-  document.getElementById('h-util').textContent = data.utilRate.toFixed(1) + '%';
+  document.getElementById('h-util').textContent = (data.utilRate ?? 0).toFixed(1) + '%';
   document.getElementById('update-time').textContent = '更新：' + data.updateTime;
 }
 
 function updateInfoCard(data) {
   document.getElementById('ic-load').innerHTML = `${fmt(data.load)}<span class="ic-unit">萬瓩</span>`;
   document.getElementById('ic-cap').innerHTML  = `${fmt(data.capacity)}<span class="ic-unit">萬瓩</span>`;
-  document.getElementById('ic-util').textContent = data.utilRate.toFixed(1) + '%';
+  document.getElementById('ic-util').textContent = (data.utilRate ?? 0).toFixed(1) + '%';
 
   const sc = getStatusColor(data.spareRate);
   const sl = getStatusLabel(data.spareRate);
@@ -702,7 +702,7 @@ function updateInfoCard(data) {
   const c = colorMap[sc] || 'var(--text)';
 
   const spareEl = document.getElementById('ic-spare');
-  spareEl.textContent = data.spareRate.toFixed(1) + '%';
+  spareEl.textContent = (data.spareRate ?? 0).toFixed(1) + '%';
   spareEl.style.color = c;
 
   const descEl = document.getElementById('ic-spare-desc');
@@ -750,7 +750,7 @@ function updateRegionPopup(key, marker) {
     <div class="pu-region">📍 ${key}</div>
     <div class="pu-row"><span class="pu-lbl">用電量（估）</span><span class="pu-val">${fmt(r.mw)} 萬瓩</span></div>
     <div class="pu-row"><span class="pu-lbl">占全台（估）</span><span class="pu-val">${pct}%</span></div>
-    <div class="pu-row"><span class="pu-lbl">全台使用率</span><span class="pu-val">${state.utilRate.toFixed(1)}%</span></div>
+    <div class="pu-row"><span class="pu-lbl">全台使用率</span><span class="pu-val">${(state.utilRate ?? 0).toFixed(1)}%</span></div>
     <span class="pu-status" style="background:${bg};color:${c}">${getStatusLabel(state.spareRate)}</span>
   `);
 }
@@ -798,9 +798,9 @@ function updateEnergyPanel(fuels) {
           <span class="fuel-name">${f.label}</span>
           <span class="fuel-mw">${fmt(f.mw)}</span>
         </div>
-        <div class="fuel-pct">${pct.toFixed(1)}%</div>
+        <div class="fuel-pct">${(+pct || 0).toFixed(1)}%</div>
         <div class="fuel-bar-bg">
-          <div class="fuel-bar-fill" style="width:${pct.toFixed(1)}%;background:${f.color}"></div>
+          <div class="fuel-bar-fill" style="width:${(+pct || 0).toFixed(1)}%;background:${f.color}"></div>
         </div>
       </div>`;
   }).join('');
