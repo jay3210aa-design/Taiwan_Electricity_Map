@@ -1,57 +1,11 @@
 {
-  "fetchTime": "2026-04-11T02:01:47.704777+08:00",
-  "error": null,
-  "fuels": [
-    {
-      "name": "核能",
-      "mw": 1110.2
-    },
-    {
-      "name": "燃煤",
-      "mw": 404.9
-    },
-    {
-      "name": "民營燃煤",
-      "mw": 654.2
-    },
-    {
-      "name": "燃氣",
-      "mw": 97.3
-    },
-    {
-      "name": "民營燃氣",
-      "mw": 48.3
-    },
-    {
-      "name": "重油",
-      "mw": 32.3
-    },
-    {
-      "name": "水力",
-      "mw": 161.5
-    },
-    {
-      "name": "輕油",
-      "mw": 26.4
-    },
-    {
-      "name": "風力",
-      "mw": 46.7
-    },
-    {
-      "name": "汽電共生",
-      "mw": 0.3
-    }
-  ],
+  "fetchTime": "2026-04-11T03:10:56.161173+08:00",
+  "error": "403 Client Error: Forbidden for url: https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/loadpara.txt",
+  "fuels": [],
   "regions": {
-    "北區": 1085.4,
-    "中區": 620.2,
-    "南區": 749.4,
-    "東區": 129.2
-  },
-  "load": 2584.2,
-  "capacity": 3376.0,
-  "utilRate": 76.5,
-  "spareRate": 30.6,
-  "updateTime": "115.04.11(六)01:50更新"
+    "北區": 0.0,
+    "中區": 0.0,
+    "南區": 0.0,
+    "東區": 0.0
+  }
 }
