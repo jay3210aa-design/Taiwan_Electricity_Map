@@ -8,24 +8,29 @@ import time
 import requests
 from datetime import datetime, timezone, timedelta
 
-# 主要資料來源：台電 loadGraph（有 Cloudflare 保護，偶爾可過）
+try:
+    import cloudscraper
+    _session = cloudscraper.create_scraper(
+        browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
+    )
+    print('cloudscraper session created')
+except ImportError:
+    _session = requests.Session()
+    _session.headers.update({
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/124.0.0.0 Safari/537.36'
+        ),
+        'Accept-Language': 'zh-TW,zh;q=0.9',
+    })
+    print('cloudscraper not found, using requests')
+
+# 主要資料來源
 TAIPOWER_BASE  = 'https://www.taipower.com.tw/d006/loadGraph/loadGraph/data/'
 TAIPOWER_ENTRY = 'https://www.taipower.com.tw/tc/page.aspx?mid=206'
-# 備用來源已停用（data.taipower.com.tw DNS 無法解析）
 TW_TZ = timezone(timedelta(hours=8))
 
-HEADERS = {
-    'User-Agent': (
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-        'AppleWebKit/537.36 (KHTML, like Gecko) '
-        'Chrome/124.0.0.0 Safari/537.36'
-    ),
-    'Accept-Language': 'zh-TW,zh;q=0.9',
-    'Referer': TAIPOWER_ENTRY,
-}
-
-_session = requests.Session()
-_session.headers.update(HEADERS)
 try:
     _session.get(TAIPOWER_ENTRY, timeout=15)
     print('session established')
