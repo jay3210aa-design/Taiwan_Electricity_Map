@@ -1,5 +1,5 @@
 {
-  "fetchTime": "2026-04-21T13:51:53.684515+08:00",
+  "fetchTime": "2026-04-21T16:05:23.443542+08:00",
   "error": "d006001 FAIL: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)",
   "fuels": [],
   "regions": {
