@@ -54,8 +54,7 @@ def fetch(url, retries=3, delay=8, extra_headers=None):
         try:
             res = _session.get(url, timeout=30, headers=hdrs)
             res.raise_for_status()
-            res.encoding = 'utf-8'
-            text = res.text
+            text = res.content.decode('utf-8-sig')
             if text.strip().startswith('<'):
                 raise ValueError('收到 HTML（被擋）')
             return text
