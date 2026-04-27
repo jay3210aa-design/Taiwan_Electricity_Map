@@ -97,54 +97,72 @@ def parse_loadpara(text):
     }
 
 
+def _mw(row, key):
+    val = str(row.get(key, '0')).replace(',', '').strip()
+    if val in ('-', '', 'None', 'nan'):
+        return 0.0
+    try:
+        return float(val)
+    except ValueError:
+        return 0.0
+
+
 def parse_d006001(text):
-    """從發電機組開放資料 JSON 計算系統負載與可供電力（備用來源）。
-
-    各燃料類型「小計」行的 淨發電量(MW) 加總 = 系統負載。
-    可供電力 = 實際有發電之燃料類型的 裝置容量(MW) 加總
-    （排除太陽能等夜間輸出為 0 的燃料，避免虛增備轉率）。
-
-    備注：所得備轉率為估計值，通常高於台電官方公告數字。
-    """
     data = json.loads(text)
-    rows = data.get('aaData', [])
 
-    subtotals = [r for r in rows if '小計' in str(r.get('機組名稱', ''))]
-    if not subtotals:
-        raise ValueError('d006001 無小計資料列')
+    # ── debug：印出頂層 key 與前兩筆 aaData（方便排查格式）────────
+    top_keys = list(data.keys()) if isinstance(data, dict) else f'list[{len(data)}]'
+    print(f'd006001 top keys: {top_keys}')
+    aa = data.get('aaData', []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+    if aa:
+        print(f'd006001 sample row keys: {list(aa[0].keys()) if isinstance(aa[0], dict) else aa[0]}')
 
-    def _mw(row, key):
-        val = str(row.get(key, '0')).replace(',', '').strip()
-        if val in ('-', '', 'None', 'nan'):
-            return 0.0
-        try:
-            return float(val)
-        except ValueError:
-            return 0.0
+    # ── 格式 A：aaData 含「小計」列（機組明細格式）──────────────
+    rows = aa
+    subtotals = [r for r in rows if isinstance(r, dict) and '小計' in str(r.get('機組名稱', ''))]
+    if subtotals:
+        total_gen = sum(_mw(r, '淨發電量(MW)') for r in subtotals)
+        total_cap = sum(_mw(r, '裝置容量(MW)') for r in subtotals if _mw(r, '淨發電量(MW)') > 0)
+        if total_gen > 0:
+            dt_str = data.get('DateTime', '') if isinstance(data, dict) else ''
+            update_time = dt_str[11:16] if len(dt_str) >= 16 else '--'
+            util_rate  = round(total_gen / total_cap * 100, 1) if total_cap else 0
+            spare_rate = round((total_cap - total_gen) / total_gen * 100, 1) if total_gen else 0
+            print(f'd006001 format-A OK: gen={total_gen:.0f} MW, cap={total_cap:.0f} MW')
+            return {
+                'load':       round(total_gen / 10, 1),
+                'capacity':   round(total_cap / 10, 1),
+                'utilRate':   util_rate,
+                'spareRate':  spare_rate,
+                'updateTime': update_time,
+            }
 
-    total_gen = sum(_mw(r, '淨發電量(MW)') for r in subtotals)
-    # 只計算實際有發電的燃料類型裝置容量
-    total_cap = sum(
-        _mw(r, '裝置容量(MW)') for r in subtotals
-        if _mw(r, '淨發電量(MW)') > 0
-    )
+    # ── 格式 B：扁平 summary（curr_load / net_peak_supply_capacity）
+    if isinstance(data, list) and data:
+        data = data[0]
+    if isinstance(data, dict):
+        def _fv(d, *keys):
+            for k in keys:
+                for dk in d:
+                    if k in dk:
+                        try: return float(str(d[dk]).replace(',', '').replace('%', ''))
+                        except: pass
+            return None
+        load_mw = _fv(data, 'curr_load', '尖峰負載', 'load')
+        cap_mw  = _fv(data, 'net_peak_supply_capacity', '淨尖峰供電能力', 'capacity')
+        if load_mw and cap_mw and load_mw > 0:
+            util   = round(load_mw / cap_mw * 100, 1) if cap_mw else 0
+            spare  = round((cap_mw - load_mw) / load_mw * 100, 1) if load_mw else 0
+            uptime = str(data.get('update_time', data.get('updateTime', '--')))
+            # 單位自動判斷（萬瓩 < 1000，MW >= 1000）
+            if load_mw >= 1000:
+                load_mw = round(load_mw / 10, 1)
+                cap_mw  = round(cap_mw  / 10, 1)
+            print(f'd006001 format-B OK: load={load_mw} 萬瓩, cap={cap_mw} 萬瓩')
+            return {'load': load_mw, 'capacity': cap_mw,
+                    'utilRate': util, 'spareRate': spare, 'updateTime': uptime}
 
-    if total_gen == 0:
-        raise ValueError('d006001 無有效發電量資料')
-
-    util_rate  = round(total_gen / total_cap * 100, 1) if total_cap else 0
-    spare_rate = round((total_cap - total_gen) / total_gen * 100, 1) if total_gen else 0
-
-    dt_str      = data.get('DateTime', '')
-    update_time = dt_str[11:16] if len(dt_str) >= 16 else '--'
-
-    return {
-        'load':       round(total_gen / 10, 1),
-        'capacity':   round(total_cap / 10, 1),
-        'utilRate':   util_rate,
-        'spareRate':  spare_rate,
-        'updateTime': update_time,
-    }
+    raise ValueError(f'd006001 無法辨識格式，top_keys={top_keys}')
 
 
 # loadfueltype.csv 欄位順序（與台電 d006001 小計類型對應，驗證於 2026-04）
