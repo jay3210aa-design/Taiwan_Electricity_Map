@@ -1,6 +1,6 @@
 {
-  "fetchTime": "2026-07-19T01:15:10.005006+08:00",
-  "error": "d006001 FAIL: 500 Server Error: Internal Server Error for url: https://service.taipower.com.tw/data/opendata/apply/file/d006001/001.json",
+  "fetchTime": "2026-07-19T02:12:16.264984+08:00",
+  "error": "d006001 FAIL: d006001 無法辨識格式，top_keys=['DateTime', 'aaData']",
   "fuels": [],
   "regions": {
     "北區": 0.0,
