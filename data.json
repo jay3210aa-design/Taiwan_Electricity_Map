@@ -1,6 +1,6 @@
 {
-  "fetchTime": "2026-08-13T12:28:44.311189+08:00",
-  "error": "d006001 FAIL: d006001 無法辨識格式，top_keys=['DateTime', 'aaData']",
+  "fetchTime": "2026-08-13T14:02:22.388984+08:00",
+  "error": "d006001 FAIL: HTTPSConnectionPool(host='service.taipower.com.tw', port=443): Max retries exceeded with url: /data/opendata/apply/file/d006001/001.json (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1016)')))",
   "fuels": [],
   "regions": {
     "北區": 0.0,
