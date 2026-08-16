@@ -1,6 +1,6 @@
 {
-  "fetchTime": "2026-08-17T01:28:40.556634+08:00",
-  "error": "d006001 FAIL: d006001 無法辨識格式，top_keys=['DateTime', 'aaData']",
+  "fetchTime": "2026-08-17T01:50:51.352894+08:00",
+  "error": "d006001 FAIL: HTTPSConnectionPool(host='service.taipower.com.tw', port=443): Max retries exceeded with url: /data/opendata/apply/file/d006001/001.json (Caused by NameResolutionError(\"HTTPSConnection(host='service.taipower.com.tw', port=443): Failed to resolve 'service.taipower.com.tw' ([Errno -3] Temporary failure in name resolution)\"))",
   "fuels": [],
   "regions": {
     "北區": 0.0,
