@@ -1,5 +1,5 @@
 {
-  "fetchTime": "2026-08-19T09:46:31.505895+08:00",
+  "fetchTime": "2026-08-19T10:45:18.810114+08:00",
   "error": "d006001 FAIL: d006001 無法辨識格式，top_keys=['DateTime', 'aaData']",
   "fuels": [],
   "regions": {
