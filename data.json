@@ -1,6 +1,6 @@
 {
-  "fetchTime": "2026-09-21T07:28:00.707862+08:00",
-  "error": "d006001 FAIL: d006001 無法辨識格式，top_keys=['DateTime', 'aaData']",
+  "fetchTime": "2026-09-21T09:32:57.997870+08:00",
+  "error": "d006001 FAIL: 404 Client Error: Not Found for url: https://service.taipower.com.tw/data/opendata/apply/file/d006001/001.json",
   "fuels": [],
   "regions": {
     "北區": 0.0,
