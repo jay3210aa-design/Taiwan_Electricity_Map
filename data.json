@@ -1,6 +1,6 @@
 {
-  "fetchTime": "2026-11-27T10:44:30.452370+08:00",
-  "error": "d006001 FAIL: d006001 無法辨識格式，top_keys=['DateTime', 'aaData']",
+  "fetchTime": "2026-11-27T19:28:39.112671+08:00",
+  "error": "d006001 FAIL: HTTPSConnectionPool(host='service.taipower.com.tw', port=443): Read timed out. (read timeout=30)",
   "fuels": [],
   "regions": {
     "北區": 0.0,
