@@ -1,5 +1,5 @@
 {
-  "fetchTime": "2026-11-28T04:14:47.713132+08:00",
+  "fetchTime": "2026-11-28T10:48:06.981377+08:00",
   "error": "d006001 FAIL: HTTPSConnectionPool(host='service.taipower.com.tw', port=443): Read timed out. (read timeout=30)",
   "fuels": [],
   "regions": {
